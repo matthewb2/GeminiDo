@@ -1,0 +1,68 @@
+{
+  "name": "webchatforgemini",
+  "displayName": "WebChatForGemini",
+  "description": "VSCode extension to interact with Gemini without leaving the IDE",
+  "version": "0.0.5",
+  "engines": {
+    "vscode": "^1.87.0"
+  },
+  "publisher": "wewake",
+  "author": "wewake",
+  "icon": "src/assets/icon.jpeg",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/viv1/gemini-web-vscode"
+  },
+  "categories": [
+    "Visualization",
+    "Debuggers",
+    "Education",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "Chat",
+    "LLM",
+    "GenAI",
+    "Gemini"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "webchatforgemini.chat",
+          "name": "Web Chat for Gemini"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "webchatforgemini.open",
+        "title": "Web Chat for Gemini"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.87.0",
+    "@typescript-eslint/eslint-plugin": "^7.4.0",
+    "@typescript-eslint/parser": "^7.4.0",
+    "@vscode/test-cli": "^0.0.8",
+    "@vscode/test-electron": "^2.3.9",
+    "css-loader": "^7.1.2",
+    "eslint": "^8.57.0",
+    "style-loader": "^4.0.0",
+    "typescript": "^5.3.3",
+    "vsce": "^2.15.0"
+  },
+  "overrides": {
+    "undici": "5.8.0"
+  }
+}

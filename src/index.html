@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Interface</title>
+    <style>
+        /* Import a Google Font for the user input and messages */
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
+
+        /* General styles, variables for light theme */
+        /* General styles, variables for a light theme */
+        :root {
+            --bg-color: var(--vscode-editor-background);
+            --text-color: var(--vscode-editor-foreground);
+            --user-message-bg: var(--vscode-editor-background);
+            --system-message-bg: var(--vscode-editor-background);
+            --input-bg-color: var(--vscode-input-background);
+            --input-text-color: var(--vscode-input-foreground);
+            --border-color: var(--vscode-input-border);
+            --button-bg: var(--vscode-button-background);
+            --button-text: var(--vscode-button-foreground);
+            --button-hover-bg: var(--vscode-button-hoverBackground);
+            --code-bg: var(--vscode-textCodeBlock-background);
+            --code-text: var(--vscode-editor-foreground);
+            --link-color: var(--vscode-textLink-foreground);
+        }
+
+        /* 폰트는 VS Code의 기본 폰트와 일치하도록 제거 */
+        body,
+        html,
+        #message-input,
+        .message,
+        code {
+            font-family: var(--vscode-editor-font-family);
+            font-size: var(--vscode-editor-font-size);
+        }
+
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            /* 전체 공간 사용 */
+            padding: 0;
+            /* 불필요한 여백 제거 */
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #message-area {
+            width: 100%;
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background-color: var(--bg-color);
+            transition: background-color 0.3s;
+        }
+
+        /* VS Code에 어울리는 메시지 입력 폼 스타일 */
+        #message-form {
+            display: flex;
+            flex-direction: column; /* 세로 배치로 변경 */
+            gap: 8px;
+            padding: 10px;
+            border-top: 1px solid var(--vscode-input-border);
+            box-sizing: border-box;
+        }
+
+        #image-input {
+            display: none;
+            /* 실제 파일 선택창 숨김 */
+        }
+
+        #message-input {
+            flex: none;          
+            width: 100%;
+            /* 부모 컨테이너 너비를 꽉 채움 */
+            margin: 0 0 10px 0;
+            box-sizing: border-box; /* 패딩/테두리를 폭에 포함 */
+            /* 아래쪽에만 여백 추가 */
+            padding: 8px;
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            resize: none;
+            min-height: 38px;
+            max-height: 150px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: var(--vscode-editor-font-size);
+        }
+
+        #message-input:focus {
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: 1px;
+        }
+
+        #input-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* 좌우 끝으로 배치 */
+        }
+
+        #file-upload-label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+        }
+
+
+        #send-button {
+            margin-left: auto; /* 남은 공간 밀어내기 */
+            height: 38px;
+            padding: 8px 12px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #send-button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        .icon {
+            font-size: 16px;
+            color: var(--vscode-icon-foreground);
+        }
+
+        /* 버튼 스타일을 VS Code 기본 버튼과 유사하게 변경 */
+        button {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            /* VS Code 버튼은 보통 border가 없습니다. */
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            height: 38px;
+            /* 입력 필드와 높이 맞춤 */
+        }
+
+        button:hover {
+            background-color: var(--button-hover-bg);
+        }
+
+        button:disabled {
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            cursor: not-allowed;
+        }
+
+        /* 메시지 버블 스타일 수정 */
+        .message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: var(--vscode-editor-font-size);
+        }
+
+        .user-message {
+            background-color: var(--vscode-editor-background);
+            text-align: right;
+            /* 사용자의 메시지를 오른쪽 정렬 */
+        }
+
+        .system-message {
+            background-color: var(--vscode-editor-background);
+            text-align: left;
+            /* 시스템 메시지는 왼쪽 정렬 */
+        }
+
+        /* 아이콘 크기 조정 및 VS Code 스타일에 맞게 수정 */
+        .icon,
+        #settings-icon {
+            cursor: pointer;
+            font-size: 16px;
+            /* 아이콘 크기를 적절하게 줄임 */
+            color: var(--vscode-button-foreground);
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0 5px;
+            height: 38px;
+            line-height: 38px;
+            /* 아이콘을 수직 정렬 */
+        }
+
+        #settings-icon {
+            font-size: 20px;
+            /* 톱니바퀴 아이콘을 조금 더 크게 */
+            color: var(--vscode-icon-foreground);
+        }
+
+        /* 설정 다이얼로그 스타일 수정 */
+        #settings-dialog {
+            display: none;
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 300px;
+            height: 100%;
+            background-color: var(--vscode-sideBar-background);
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
+            /* 그림자 약하게 */
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 100;
+            /* 다른 요소 위에 표시 */
+            border-left: 1px solid var(--vscode-sideBar-border);
+        }
+
+        #settings-dialog input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            box-sizing: border-box;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-input-border);
+        }
+
+        #settings-dialog input:focus {
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: 1px;
+        }
+
+        .close-button {
+            font-size: 20px;
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            color: var(--vscode-icon-foreground);
+        }
+
+        /* 코드 블록 스타일 수정 */
+        pre,
+        code {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            /* 줄바꿈 허용 */
+            word-break: break-all;
+        }
+
+        /* 복사 버튼 스타일 조정 */
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        /* 기타 */
+        .error-message {
+            color: var(--vscode-errorForeground);
+        }
+
+        .api-key-link {
+            color: var(--vscode-textLink-foreground);
+        }
+
+        .spinner {
+            border: 4px solid var(--vscode-editor-background);
+            border-top: 4px solid var(--vscode-button-background);
+            /* 스피너 색상을 테마에 맞게 */
+        }
+    </style>
+    <!-- Importing Prism.js for code snippet highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism.min.css" rel="stylesheet" />
+    <!-- Importing FontAwesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+
+</head>
+
+<body>
+    <div id="chat-container">
+        <!-- Settings and toggle buttons -->
+        <div style="align-self: flex-end; padding: 10px;">
+            <button id="settings-icon">&#9881;</button> <!-- Settings icon -->
+
+        </div>
+
+        <div id="message-area"></div>
+        <div id="thumbnail-container"></div> <!-- Container for thumbnails -->
+        <div id="spinner" class="spinner" style="display: none;"></div>
+        <form id="message-form">
+            <!-- 메시지 입력창 -->
+            <textarea id="message-input" placeholder="메시지를 입력하세요..." rows="2"></textarea>
+
+            <!-- 파일첨부 & 전송 버튼 (아래로 이동) -->
+            <div id="input-controls">
+                <!-- 📎 파일첨부 -->
+                <label id="file-upload-label" for="image-input">
+                    <i class="fas fa-paperclip icon"></i>
+                </label>
+                <input type="file" id="image-input" accept="image/*" multiple>
+
+                <!-- 전송 버튼 -->
+                <button id="send-button" type="submit">보내기</button>
+            </div>
+        </form>
+
+
+    </div>
+
+    <!-- Settings dialog -->
+    <div id="settings-dialog">
+        <button class="close-button">&#10006;</button> <!-- X icon -->
+        <h2>Settings</h2>
+        <input type="text" id="settings-input" class="settings-input" placeholder="Enter value...">
+        <div id="error-message" class="error" style="display: none;"></div>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
+            class="api-key-link">Get Gemini API Key</a>
+        <button id="save-settings">Save</button>
+    </div>
+
+    <!-- Markdown to HTML converter: https://github.com/showdownjs/showdown -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <!-- Prism JS for code highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script type="module">
+        import {
+            GoogleGenerativeAI,
+            HarmCategory,
+            HarmBlockThreshold,
+        } from "https://cdn.skypack.dev/@google/generative-ai";
+
+        // Get gemini api key if present in local storage 
+        let geminiApiKey = localStorage.getItem('gemini-api-key');
+        document.getElementById('settings-input').value = geminiApiKey;
+
+        // GeminiChat initialized instance
+        let geminiChat = null;
+
+        // Function to add copy buttons and functionality
+        function addCopyButtons(html) {
+            let tempContainer = document.createElement('div');
+            tempContainer.innerHTML = html;
+
+            tempContainer.querySelectorAll('pre code').forEach((block, index) => {
+                const randomNumber = Math.floor(Math.random() * 8192)
+                const btn = document.createElement('button');
+                btn.innerHTML = '<i class="fas fa-copy"></i>';
+                btn.className = 'copy-button';
+                btn.setAttribute('data-copy-target-id', `codeBlock-${randomNumber}-${index}`); // add random id for each code section
+                btn.textContent = "Copy";
+
+                block.setAttribute('id', `codeBlock-${index}`);
+                block.parentNode.insertBefore(btn, block);
+            });
+            return tempContainer.innerHTML;
+        }
+
+        // Converts a File object to a GoogleGenerativeAI.Part object.
+        async function fileToGenerativePart(file) {
+            const base64EncodedDataPromise = new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+            return {
+                inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+            };
+        }
+
+        // Add response of Gemini to the DOM
+        function addSystemMessage(response, is_error) {
+            const messageArea = document.getElementById('message-area');
+            const message = document.createElement('div');
+            message.classList.add('message', 'message-box');
+            if (is_error) {
+                message.classList.add('error-message');
+            }
+            message.innerHTML = response;
+            messageArea.appendChild(message);
+            Prism.highlightAll(); // Highlight the code block
+
+            document.querySelectorAll(".copy-button").forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const textArea = document.createElement('textarea');
+                    // textArea.style.display = "hidden";
+                    textArea.value = btn.nextSibling.textContent;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+
+                    btn.textContent = "Copied!"
+                    setTimeout(() => {
+                        btn.textContent = 'Copy';
+                    }, 2000);
+                });
+            })
+        }
+
+        async function getGeminiChatInstance() {
+            if (geminiChat) return geminiChat;
+
+            const genAI = new GoogleGenerativeAI(geminiApiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+            const config = {
+                temperature: 1,
+                topK: 1,
+                topP: 1,
+                maxOutputTokens: 8192,
+            };
+
+            const safetyConfig = [
+                {
+                    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                },
+                {
+                    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                }
+            ];
+
+            const initialContext = {
+                history: [
+                    {
+                        role: "user",
+                        parts: [{ text: "Hello, provide me all answers in clear and concise terms." }],
+                    },
+                    {
+                        role: "model",
+                        parts: [{ text: "Sure" }],
+                    }
+                ],
+                generationConfig: config,
+                safetyConfig
+            }
+
+            geminiChat = model.startChat(initialContext);
+            return geminiChat;
+        }
+
+        async function getGeminiVisionResponse(prompt, files) {
+            const imageParts = await Promise.all(
+                [...files].map(fileToGenerativePart),
+            );
+
+            const genAI = new GoogleGenerativeAI(geminiApiKey);
+            const geminiVisionModel = await genAI.getGenerativeModel({
+                model: imageParts.length ? "gemini-1.5-flash" : "gemini-pro",
+            });
+            const result = await geminiVisionModel.generateContent([prompt, ...imageParts]);
+            return result
+        }
+
+        async function sendToGemini(prompt, files) {
+            const spinner = document.getElementById('spinner');
+            spinner.style.display = 'block'; // Show the spinner
+
+            let chat, result, error
+            if (files && files.length > 0) { // call vision pro if any image exists
+                try {
+                    result = await getGeminiVisionResponse(prompt, files)
+                } catch (e) {
+                    console.warn("Error calling gemini pro vision:", e)
+                    error = e
+                }
+            } else { // call gemini-pro if no image exists
+                try {
+                    chat = await getGeminiChatInstance();
+                } catch (e) {
+                    console.warn("Error initializing gemini chat instance:", e)
+                    error = e
+                }
+                if (chat) {  // only send message if chat instance initializes successfully
+                    try {
+                        result = await chat.sendMessage(prompt);
+                    } catch (e) {
+                        console.warn("Error sending message:", e)
+                        error = e
+                    }
+                }
+            }
+
+            if (error) {
+                addSystemMessage(error, true)  // Display error to the user
+            }
+            if (result) {
+                const response = await result.response;
+                const converter = new showdown.Converter();
+                const html = converter.makeHtml(response.text());
+                addSystemMessage(addCopyButtons(html));
+            }
+            spinner.style.display = 'none'; // Hide the spinner
+        }
+
+        // On Document Load, add all event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            document.documentElement.setAttribute('data-theme', 'dark'); // Default to dark mode
+
+            const form = document.getElementById('message-form');
+            const messageArea = document.getElementById('message-area');
+
+            const imageInput = document.getElementById('image-input');
+            const thumbnailContainer = document.getElementById('thumbnail-container');
+
+            imageInput.addEventListener('change', function () {
+                Array.from(this.files).forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const wrapper = document.createElement('div');
+                        wrapper.classList.add('thumbnail-wrapper');
+
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+
+                        const removeBtn = document.createElement('button');
+                        removeBtn.classList.add('remove-image');
+                        removeBtn.textContent = 'X';
+                        removeBtn.onclick = function () {
+                            wrapper.remove();
+                            // Remove file from the FileList
+                            imageInput.files = removeFileFromFileList(imageInput.files, index);
+                        };
+
+                        wrapper.appendChild(img);
+                        wrapper.appendChild(removeBtn);
+                        thumbnailContainer.appendChild(wrapper);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            // Function to remove a file from the FileList
+            function removeFileFromFileList(fileList, indexToRemove) {
+                const dt = new DataTransfer();
+                for (let i = 0; i < fileList.length; i++) {
+                    if (indexToRemove !== i) {
+                        dt.items.add(fileList[i]);
+                    }
+                }
+                return dt.files;
+            }
+
+            // On input submit handling
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                const sendButton = document.getElementById('send-button');
+
+                // When API key is not set
+                if (geminiApiKey.trim() === '') {
+                    const saveSettingsErrorMessage = document.getElementById('error-message');
+                    saveSettingsErrorMessage.textContent = 'Please enter a value.';
+                    saveSettingsErrorMessage.style.display = 'block';
+
+                    const settingsIcon = document.getElementById('settings-icon');
+                    settingsIcon.click();
+                    return;
+                }
+
+                const messageInput = document.getElementById('message-input');
+                const imageInput = document.getElementById('image-input');
+                const messageArea = document.getElementById('message-area');
+
+                // Handle text message
+                // does not allow empty input
+                if (messageInput.value.trim() !== '') {
+                    sendButton.disabled = true;
+                    const div = document.createElement('div');
+                    div.classList.add('message-box');
+
+                    const iconSpan = document.createElement('span');
+                    iconSpan.classList.add('user-icon');
+                    iconSpan.innerHTML = '<i class="fas fa-user"></i>';  // Using a generic user icon from FontAwesome
+                    div.appendChild(iconSpan);
+
+                    const messageSpan = document.createElement('span');
+                    messageSpan.textContent = messageInput.value;
+                    div.appendChild(messageSpan);
+
+                    messageArea.appendChild(div);
+                    messageInput.value = '';
+
+                    let imageFiles = [];
+                    // Handle image upload
+
+                    if (imageInput.files.length > 0) {
+                        Array.from(imageInput.files).forEach((file, index) => {
+                            const img = document.createElement('img');
+                            img.classList.add('message-image')
+                            img.src = URL.createObjectURL(file);
+                            img.onload = () => URL.revokeObjectURL(img.src); // Release object URL after loading
+                            messageArea.appendChild(img);
+                            imageInput.value = '';
+                            imageFiles.push(file)
+                        });
+
+                        // Remove image thumbnail
+                        const thumbnailContainer = document.getElementById('thumbnail-container');
+                        thumbnailContainer.textContent = '';
+                    }
+
+                    sendToGemini(messageArea.lastChild.textContent, imageFiles);
+                    // Scroll to the bottom
+                    messageArea.scrollTop = messageArea.scrollHeight;
+                    sendButton.disabled = false;  // disable send button
+                }
+
+
+            });
+
+            // Handle settings dialog
+            const settingsIcon = document.getElementById('settings-icon');
+            const settingsDialog = document.getElementById('settings-dialog');
+            const closeSettings = document.querySelector('.close-button');
+            const saveSettingsButton = document.getElementById('save-settings');
+
+            settingsIcon.onclick = () => {
+                settingsDialog.style.display = 'block';
+            };
+
+            closeSettings.onclick = () => {
+                settingsDialog.style.display = 'none';
+            };
+
+            saveSettingsButton.onclick = () => {
+                // Logic to save settings
+                const settingsValue = document.getElementById('settings-input').value;
+                const newGeminiApiKey = settingsValue.trim();
+
+                if (newGeminiApiKey !== geminiApiKey) {
+                    geminiApiKey = newGeminiApiKey;
+                    localStorage.setItem('gemini-api-key', geminiApiKey);
+                    geminiChat = null;  // remove existing gemini chat instance to force it to create a new one
+                }
+
+                if (geminiApiKey !== '') {
+                    const saveSettingsErrorMessage = document.getElementById('error-message');
+                    saveSettingsErrorMessage.style.display = 'none';
+                }
+                settingsDialog.style.display = 'none';
+            };
+
+            // Allow Textarea to expand dynamically
+            const textarea = document.getElementById('message-input');
+            textarea.addEventListener('input', function () {
+                this.style.height = 'auto'; // Reset height to auto to allow shrink
+                this.style.height = this.scrollHeight + 'px'; // Adjust height based on content
+            });
+
+            // Dark mode toggle functionality
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            darkModeToggle.addEventListener('change', function () {
+                if (!this.checked) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
