@@ -1,0 +1,287 @@
+/* Import a Google Font for the user input and messages */
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
+
+        /* General styles, variables for light theme */
+        /* General styles, variables for a light theme */
+        :root {
+            --bg-color: var(--vscode-editor-background);
+            --text-color: var(--vscode-editor-foreground);
+            --user-message-bg: var(--vscode-editor-background);
+            --system-message-bg: var(--vscode-editor-background);
+            --input-bg-color: var(--vscode-input-background);
+            --input-text-color: var(--vscode-input-foreground);
+            --border-color: var(--vscode-input-border);
+            --button-bg: var(--vscode-button-background);
+            --button-text: var(--vscode-button-foreground);
+            --button-hover-bg: var(--vscode-button-hoverBackground);
+            --code-bg: var(--vscode-textCodeBlock-background);
+            --code-text: var(--vscode-editor-foreground);
+            --link-color: var(--vscode-textLink-foreground);
+        }
+
+        /* 폰트는 VS Code의 기본 폰트와 일치하도록 제거 */
+        body,
+        html,
+        #message-input,
+        .message,
+        code {
+            font-family: var(--vscode-editor-font-family);
+            font-size: var(--vscode-editor-font-size);
+        }
+
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            /* 전체 공간 사용 */
+            padding: 0;
+            /* 불필요한 여백 제거 */
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #message-area {
+            width: 100%;
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background-color: var(--bg-color);
+            transition: background-color 0.3s;
+        }
+
+        /* VS Code에 어울리는 메시지 입력 폼 스타일 */
+        #message-form {
+            display: flex;
+            flex-direction: column; /* 세로 배치로 변경 */
+            gap: 8px;
+            padding: 10px;
+            border-top: 1px solid var(--vscode-input-border);
+            box-sizing: border-box;
+        }
+
+        #image-input {
+            display: none;
+            /* 실제 파일 선택창 숨김 */
+        }
+
+        #message-input {
+            flex: none;          
+            width: 100%;
+            /* 부모 컨테이너 너비를 꽉 채움 */
+            margin: 0 0 10px 0;
+            box-sizing: border-box; /* 패딩/테두리를 폭에 포함 */
+            /* 아래쪽에만 여백 추가 */
+            padding: 8px;
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            resize: none;
+            min-height: 38px;
+            max-height: 150px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: var(--vscode-editor-font-size);
+        }
+
+        #message-input:focus {
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: 1px;
+        }
+
+        #input-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* 좌우 끝으로 배치 */
+        }
+
+        #file-upload-label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+        }
+
+
+        #send-button {
+            margin-left: auto; /* 남은 공간 밀어내기 */
+            height: 38px;
+            padding: 8px 12px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #send-button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        .icon {
+            font-size: 16px;
+            color: var(--vscode-icon-foreground);
+        }
+
+        /* 버튼 스타일을 VS Code 기본 버튼과 유사하게 변경 */
+        button {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            /* VS Code 버튼은 보통 border가 없습니다. */
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            height: 38px;
+            /* 입력 필드와 높이 맞춤 */
+        }
+
+        button:hover {
+            background-color: var(--button-hover-bg);
+        }
+
+        button:disabled {
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            cursor: not-allowed;
+        }
+
+        /* 메시지 버블 스타일 수정 */
+        .message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: var(--vscode-editor-font-size);
+        }
+
+        .user-message {
+            background-color: var(--vscode-editor-background);
+            text-align: right;
+            /* 사용자의 메시지를 오른쪽 정렬 */
+        }
+
+        .system-message {
+            background-color: var(--vscode-editor-background);
+            text-align: left;
+            /* 시스템 메시지는 왼쪽 정렬 */
+        }
+
+        /* 아이콘 크기 조정 및 VS Code 스타일에 맞게 수정 */
+        .icon,
+        #settings-icon {
+            cursor: pointer;
+            font-size: 16px;
+            /* 아이콘 크기를 적절하게 줄임 */
+            color: var(--vscode-button-foreground);
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0 5px;
+            height: 38px;
+            line-height: 38px;
+            /* 아이콘을 수직 정렬 */
+        }
+
+        #settings-icon {
+            font-size: 20px;
+            /* 톱니바퀴 아이콘을 조금 더 크게 */
+            color: var(--vscode-icon-foreground);
+        }
+
+        /* 설정 다이얼로그 스타일 수정 */
+        #settings-dialog {
+            display: none;
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 300px;
+            height: 100%;
+            background-color: var(--vscode-sideBar-background);
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
+            /* 그림자 약하게 */
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 100;
+            /* 다른 요소 위에 표시 */
+            border-left: 1px solid var(--vscode-sideBar-border);
+        }
+
+        #settings-dialog input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            box-sizing: border-box;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-input-border);
+        }
+
+        #settings-dialog input:focus {
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: 1px;
+        }
+
+        .close-button {
+            font-size: 20px;
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            color: var(--vscode-icon-foreground);
+        }
+
+        /* 코드 블록 스타일 수정 */
+        pre,
+        code {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            /* 줄바꿈 허용 */
+            word-break: break-all;
+        }
+
+        /* 복사 버튼 스타일 조정 */
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        /* 기타 */
+        .error-message {
+            color: var(--vscode-errorForeground);
+        }
+
+        .api-key-link {
+            color: var(--vscode-textLink-foreground);
+        }
+
+        .spinner {
+            border: 4px solid var(--vscode-editor-background);
+            border-top: 4px solid var(--vscode-button-background);
+            /* 스피너 색상을 테마에 맞게 */
+        }

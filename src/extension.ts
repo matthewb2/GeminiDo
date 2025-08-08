@@ -18,22 +18,50 @@ export function activate(context: vscode.ExtensionContext) {
 			"Web Chat for Gemini",
 			vscode.ViewColumn.Beside,
 			{
-			  enableScripts: true,
-			  retainContextWhenHidden: true,
-			  localResourceRoots: [vscode.Uri.file(context.extensionPath)],
+				enableScripts: true,
+				retainContextWhenHidden: true,
+				localResourceRoots: [vscode.Uri.file(path.join(context.extensionPath, 'src'))],
 			}
-		  );
+		);
+
+		// CSS 파일 경로 설정
+		const cssPathOnDisk = vscode.Uri.file(path.join(context.extensionPath, 'src', 'styles.css'));
+
+		// vscode-resource -> webview-compatible URL로 변환
+		const cssUri = panel.webview.asWebviewUri(cssPathOnDisk);
 
 		// Load HTML content from file
 		const htmlPath = path.join(context.extensionPath, "src/index.html");
-		const htmlContent = vscode.Uri.file(htmlPath).with({
-		  scheme: "vscode-resource",
-		});
-		panel.webview.html = fs.readFileSync(htmlContent.fsPath, "utf8");
+
+		let html = fs.readFileSync(htmlPath, "utf8");
+
+		// CSS URI를 삽입할 수 있도록 HTML에 placeholder 설정
+		html = html.replace("{{styleUri}}", cssUri.toString());
+
+		panel.webview.html = html;
+
+		panel.webview.onDidReceiveMessage(
+			async message => {
+				if (message.command === 'sendToGemini') {
+					console.log('Received from webview:', message.text);
+				}
+				panel.webview.postMessage({
+					command: 'addSystemMessage',
+					text: '이 메시지는 확장에서 보냈습니다.',
+					is_error: false
+				});
+
+
+			},
+			undefined,
+			context.subscriptions
+		);
+
+
 	});
 
 	context.subscriptions.push(geminiwebchat);
 }
 
 // This method is called when the extension is deactivated. It's a No-Op at this point
-export function deactivate() {}
+export function deactivate() { }
