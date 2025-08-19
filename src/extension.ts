@@ -125,39 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
           } else if (message.command === "sendToExtension") {
             console.log("Received from webview:", message.text);
-            /*
-					try {						
-						// Gemini API 호출					
-						const apiKey = 'AIzaSyBaU_WjgNmd8DKnfQJ62V36DPS4kmUWH3I';
-						const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({
-								contents: [{ parts: [{ text: message.text }] }]
-							})
-						});
-
-						const data: any = await res.json();
-						const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '(응답 없음)';
-
-						// 웹뷰로 응답 전송
-						panel.webview.postMessage({
-							command: 'addSystemMessage',
-							text: replyText,
-							is_error: false
-						});
-
-					} catch (err: any) {
-						panel.webview.postMessage({
-							command: 'addSystemMessage',
-							text: `오류: ${err.message}`,
-							is_error: true
-						});
-					}
-						*/
-            // @filename 처리
-            // 웹뷰로 응답 전송
-            //const finalText = '1부터 100까지 자연수 합계를 구하는 자바 코드를 작성해주세요';
+            
 
             let prompt = message.text;
 
