@@ -244,22 +244,36 @@
         }
 
         /* 코드 블록 스타일 수정 */
-        pre,
-        code {
-            background-color: var(--code-bg);
-            color: var(--code-text);
+        pre {
+            background-color: var(--code-bg);            
             border: 1px solid var(--border-color);
             padding: 10px;
             border-radius: 4px;
             overflow-x: auto;
+            position: relative; /* 이 줄 추가 */
             white-space: pre-wrap;
-            /* 줄바꿈 허용 */
-            word-break: break-all;
+            word-break: break-word;
+            color: initial; /* 기본 글자색으로 */
+        }
+        code {
+            background-color: transparent; /* pre 내부이므로 배경 없애기 */
+            padding: 0;
+            font-family: 'Fira Code', monospace, monospace;
+            font-size: inherit;
+            color: inherit; /* 부모 색상 상속 */
+        }
+
+        :not(pre) > code {
+            background: none;      /* 인라인 코드 */
+            padding: 0;
+            font-family: inherit;
+            font-size: inherit;
         }
 
         /* 복사 버튼 스타일 조정 */
-        .copy-button {
-            position: absolute;
+        .copy-button,
+        .add-button {
+            position: relative;
             top: 5px;
             right: 5px;
             padding: 4px 8px;

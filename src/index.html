@@ -1,431 +1,504 @@
 <!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat Interface</title>
-    <link rel="stylesheet" type="text/css" href="{{styleUri}}">
+    <link rel="stylesheet" type="text/css" href="{{styleUri}}" />
     <!-- Importing Prism.js for code snippet highlighting -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism.min.css" rel="stylesheet" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css"
+      rel="stylesheet"
+    />
     <!-- Importing FontAwesome for icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
+  </head>
 
-</head>
-
-<body>
+  <body>
     <div id="chat-container">
-        <!-- Settings and toggle buttons -->
-        <div style="align-self: flex-end; padding: 10px;">
-            <button id="settings-icon">&#9881;</button> <!-- Settings icon -->
+      <!-- Settings and toggle buttons -->
+      <div style="align-self: flex-end; padding: 10px">
+        <button id="settings-icon">&#9881;</button>
+        <!-- Settings icon -->
+      </div>
 
+      <div id="message-area"></div>
+      <div id="thumbnail-container"></div>
+      <!-- Container for thumbnails -->
+      <div id="spinner" class="spinner" style="display: none"></div>
+      <form id="message-form">
+        <!-- 메시지 입력창 -->
+        <textarea
+          id="message-input"
+          placeholder="메시지를 입력하세요..."
+          rows="2"
+        ></textarea>
+
+        <!-- 파일첨부 & 전송 버튼 (아래로 이동) -->
+        <div id="input-controls">
+          <!-- 📎 파일첨부 -->
+          <label id="file-upload-label" for="image-input">
+            <i class="fas fa-paperclip icon"></i>
+          </label>
+          <input type="file" id="image-input" accept="image/*" multiple />
+
+          <!-- 전송 버튼 -->
+          <button id="send-button" type="submit">보내기</button>
         </div>
-
-        <div id="message-area"></div>
-        <div id="thumbnail-container"></div> <!-- Container for thumbnails -->
-        <div id="spinner" class="spinner" style="display: none;"></div>
-        <form id="message-form">
-            <!-- 메시지 입력창 -->
-            <textarea id="message-input" placeholder="메시지를 입력하세요..." rows="2"></textarea>
-
-            <!-- 파일첨부 & 전송 버튼 (아래로 이동) -->
-            <div id="input-controls">
-                <!-- 📎 파일첨부 -->
-                <label id="file-upload-label" for="image-input">
-                    <i class="fas fa-paperclip icon"></i>
-                </label>
-                <input type="file" id="image-input" accept="image/*" multiple>
-
-                <!-- 전송 버튼 -->
-                <button id="send-button" type="submit">보내기</button>
-            </div>
-        </form>
-
-
+      </form>
     </div>
 
     <!-- Settings dialog -->
     <div id="settings-dialog">
-        <button class="close-button">&#10006;</button> <!-- X icon -->
-        <h2>Settings</h2>
-        <input type="text" id="settings-input" class="settings-input" placeholder="Enter value...">
-        <div id="error-message" class="error" style="display: none;"></div>
-        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
-            class="api-key-link">Get Gemini API Key</a>
-        <button id="save-settings">Save</button>
+      <button class="close-button">&#10006;</button>
+      <!-- X icon -->
+      <h2>Settings</h2>
+      <input
+        type="text"
+        id="settings-input"
+        class="settings-input"
+        placeholder="Enter value..."
+      />
+      <div id="error-message" class="error" style="display: none"></div>
+      <a
+        href="https://aistudio.google.com/app/apikey"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="api-key-link"
+        >Get Gemini API Key</a
+      >
+      <button id="save-settings">Save</button>
     </div>
 
     <!-- Markdown to HTML converter: https://github.com/showdownjs/showdown -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     <!-- Prism JS for code highlighting -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    {{componentScripts}}
+
     <script type="module">
-        import {
-            GoogleGenerativeAI,
-            HarmCategory,
-            HarmBlockThreshold,
-        } from "https://cdn.skypack.dev/@google/generative-ai";
+      import {
+        GoogleGenerativeAI,
+        HarmCategory,
+        HarmBlockThreshold,
+      } from "https://cdn.skypack.dev/@google/generative-ai";
 
-        // Get gemini api key if present in local storage 
-        let geminiApiKey = localStorage.getItem('gemini-api-key');
-        document.getElementById('settings-input').value = geminiApiKey;
+      // Get gemini api key if present in local storage
+      let geminiApiKey = localStorage.getItem("gemini-api-key");
+      document.getElementById("settings-input").value = geminiApiKey;
 
-        // GeminiChat initialized instance
-        let geminiChat = null;
+      // GeminiChat initialized instance
+      let geminiChat = null;
 
-        const vscode = acquireVsCodeApi();
+      const vscode = acquireVsCodeApi();
 
-        window.addEventListener('message', event => {
-            const message = event.data;            
-            if (message.command === 'addSystemMessage') {
-                // 확장에서 받은 데이터로 addSystemMessage 호출
-                //addSystemMessage(message.text, message.is_error);
-            }
+      window.addEventListener("message", async (event) => {
+        const message = event.data;
+        if (message.command === "sendToGemini") {
+          // 확장에서 받은 데이터로 addSystemMessage 호출
+          sendToGemini(message.text, message.files);
+        }
+      });
+
+      // Function to add copy & Add buttons and functionality
+      function addCopyButtons(html) {
+        let tempContainer = document.createElement("div");
+        tempContainer.innerHTML = html;
+
+        tempContainer.querySelectorAll("pre").forEach((preElement, index) => {
+          preElement.style.position = "relative"; // 필수
+
+          const codeBlock = preElement.querySelector("code");
+          if (!codeBlock) return;
+          const randomNumber = Math.floor(Math.random() * 8192);
+
+          const buttonContainer = document.createElement("div");
+          buttonContainer.style.position = "absolute";
+          buttonContainer.style.top = "5px";
+          buttonContainer.style.right = "5px";
+          buttonContainer.style.display = "flex";
+          buttonContainer.style.gap = "4px";
+
+          const copyBtn = document.createElement("button");
+          copyBtn.innerHTML = '<i class="fas fa-copy"></i> 복사';
+          copyBtn.className = "copy-button";
+          copyBtn.setAttribute(
+            "data-copy-target-id",
+            `codeBlock-${randomNumber}-${index}`
+          ); // add random id for each code section
+          copyBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(codeBlock.innerText).then(() => {
+              copyBtn.textContent = "복사됨!";
+              setTimeout(
+                () => (copyBtn.innerHTML = '<i class="fas fa-copy"></i> 복사'),
+                2000
+              );
+            });
+          });
+
+          // Add 버튼
+          const addBtn = document.createElement("button");
+          addBtn.innerHTML = '<i class="fas fa-copy"></i> 적용';
+          addBtn.className = "add-button";
+          addBtn.addEventListener("click", () => {
+            // Send message to the extension with the code block content
+            vscode.postMessage({
+              command: "insertOrUpdateCode",
+              code: codeBlock.innerText,
+            });
+          });
+
+          buttonContainer.appendChild(copyBtn);
+          buttonContainer.appendChild(addBtn);
+
+          preElement.insertBefore(buttonContainer, codeBlock);
         });
+        return tempContainer;
+      }
 
+      // Converts a File object to a GoogleGenerativeAI.Part object.
+      async function fileToGenerativePart(file) {
+        const base64EncodedDataPromise = new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result.split(",")[1]);
+          reader.readAsDataURL(file);
+        });
+        return {
+          inlineData: {
+            data: await base64EncodedDataPromise,
+            mimeType: file.type,
+          },
+        };
+      }
 
-
-        // Function to add copy buttons and functionality
-        function addCopyButtons(html) {
-            let tempContainer = document.createElement('div');
-            tempContainer.innerHTML = html;
-
-            tempContainer.querySelectorAll('pre code').forEach((block, index) => {
-                const randomNumber = Math.floor(Math.random() * 8192)
-                const btn = document.createElement('button');
-                btn.innerHTML = '<i class="fas fa-copy"></i>';
-                btn.className = 'copy-button';
-                btn.setAttribute('data-copy-target-id', `codeBlock-${randomNumber}-${index}`); // add random id for each code section
-                btn.textContent = "Copy";
-
-                block.setAttribute('id', `codeBlock-${index}`);
-                block.parentNode.insertBefore(btn, block);
-            });
-            return tempContainer.innerHTML;
-        }
-
-        // Converts a File object to a GoogleGenerativeAI.Part object.
-        async function fileToGenerativePart(file) {
-            const base64EncodedDataPromise = new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                reader.readAsDataURL(file);
-            });
-            return {
-                inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-            };
-        }
-
-        // Add response of Gemini to the DOM
-        function addSystemMessage(response, is_error) {
+      // Add response of Gemini to the DOM
+      function addSystemMessage(response, is_error) {
+        /*
             const messageArea = document.getElementById('message-area');
             const message = document.createElement('div');
             message.classList.add('message', 'message-box');
             if (is_error) {
                 message.classList.add('error-message');
             }
+            console.log(response);
             message.innerHTML = response;
             messageArea.appendChild(message);
             Prism.highlightAll(); // Highlight the code block
+            */
+        //const enhancedContent = addCopyButtons(html);
+        const messageArea = document.getElementById("message-area");
+        const message = document.createElement("div");
+        message.classList.add("message", "message-box");
+        message.appendChild(response);
+        messageArea.appendChild(message);
+        messageArea.scrollTop = messageArea.scrollHeight; // Scroll to the bottom
+        Prism.highlightAll(); // Highlight the code block
+        console.log(response.innerHTML);
+      }
 
-            document.querySelectorAll(".copy-button").forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const textArea = document.createElement('textarea');
-                    // textArea.style.display = "hidden";
-                    textArea.value = btn.nextSibling.textContent;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
+      async function getGeminiChatInstance() {
+        if (geminiChat) return geminiChat;
 
-                    btn.textContent = "Copied!"
-                    setTimeout(() => {
-                        btn.textContent = 'Copy';
-                    }, 2000);
-                });
-            })
-        }
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-        async function getGeminiChatInstance() {
-            if (geminiChat) return geminiChat;
+        const config = {
+          temperature: 1,
+          topK: 1,
+          topP: 1,
+          maxOutputTokens: 8192,
+        };
 
-            const genAI = new GoogleGenerativeAI(geminiApiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const safetyConfig = [
+          {
+            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+          },
+        ];
 
-            const config = {
-                temperature: 1,
-                topK: 1,
-                topP: 1,
-                maxOutputTokens: 8192,
-            };
-
-            const safetyConfig = [
+        const initialContext = {
+          history: [
+            {
+              role: "user",
+              parts: [
                 {
-                    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-                    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                  text: "Hello, provide me all answers in clear and concise terms.",
                 },
-                {
-                    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                }
-            ];
+              ],
+            },
+            {
+              role: "model",
+              parts: [{ text: "Sure" }],
+            },
+          ],
+          generationConfig: config,
+          safetyConfig,
+        };
 
-            const initialContext = {
-                history: [
-                    {
-                        role: "user",
-                        parts: [{ text: "Hello, provide me all answers in clear and concise terms." }],
-                    },
-                    {
-                        role: "model",
-                        parts: [{ text: "Sure" }],
-                    }
-                ],
-                generationConfig: config,
-                safetyConfig
+        geminiChat = model.startChat(initialContext);
+        return geminiChat;
+      }
+
+      async function getGeminiVisionResponse(prompt, files) {
+        const imageParts = await Promise.all(
+          [...files].map(fileToGenerativePart)
+        );
+
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const geminiVisionModel = await genAI.getGenerativeModel({
+          model: imageParts.length ? "gemini-2.0-flash" : "gemini-pro",
+        });
+        const result = await geminiVisionModel.generateContent([
+          prompt,
+          ...imageParts,
+        ]);
+        return result;
+      }
+
+      async function send2Gemini(prompt, files) {}
+      async function sendToGemini(prompt, files) {
+        const spinner = document.getElementById("spinner");
+        spinner.style.display = "block"; // Show the spinner
+
+        let chat, result, error;
+        if (files && files.length > 0) {
+          // call vision pro if any image exists
+          try {
+            result = await getGeminiVisionResponse(prompt, files);
+          } catch (e) {
+            console.warn("Error calling gemini pro vision:", e);
+            error = e;
+          }
+        } else {
+          // call gemini-pro if no image exists
+          try {
+            chat = await getGeminiChatInstance();
+          } catch (e) {
+            console.warn("Error initializing gemini chat instance:", e);
+            error = e;
+          }
+          if (chat) {
+            // only send message if chat instance initializes successfully
+            try {
+              result = await chat.sendMessage(prompt);
+            } catch (e) {
+              console.warn("Error sending message:", e);
+              error = e;
             }
-
-            geminiChat = model.startChat(initialContext);
-            return geminiChat;
+          }
         }
 
-        async function getGeminiVisionResponse(prompt, files) {
-            const imageParts = await Promise.all(
-                [...files].map(fileToGenerativePart),
-            );
-
-            const genAI = new GoogleGenerativeAI(geminiApiKey);
-            const geminiVisionModel = await genAI.getGenerativeModel({
-                model: imageParts.length ? "gemini-2.0-flash" : "gemini-pro",
-            });
-            const result = await geminiVisionModel.generateContent([prompt, ...imageParts]);
-            return result
+        if (error) {
+          addSystemMessage(error, true); // Display error to the user
         }
-
-        async function sendToGemini(prompt, files) {
-
-            const spinner = document.getElementById('spinner');
-            spinner.style.display = 'block'; // Show the spinner
-
-            let chat, result, error
-            if (files && files.length > 0) { // call vision pro if any image exists
-                try {
-                    result = await getGeminiVisionResponse(prompt, files)
-                } catch (e) {
-                    console.warn("Error calling gemini pro vision:", e)
-                    error = e
-                }
-            } else { // call gemini-pro if no image exists
-                try {
-                    chat = await getGeminiChatInstance();
-                } catch (e) {
-                    console.warn("Error initializing gemini chat instance:", e)
-                    error = e
-                }
-                if (chat) {  // only send message if chat instance initializes successfully
-                    try {
-                        result = await chat.sendMessage(prompt);
-                    } catch (e) {
-                        console.warn("Error sending message:", e)
-                        error = e
-                    }
-                }
-            }
-
-            if (error) {
-                addSystemMessage(error, true)  // Display error to the user
-            }
-            if (result) {
-                const response = await result.response;
-                const converter = new showdown.Converter();
-                const html = converter.makeHtml(response.text());
-                addSystemMessage(addCopyButtons(html));
-            }
-            spinner.style.display = 'none'; // Hide the spinner
+        if (result) {
+          const response = await result.response;
+          const converter = new showdown.Converter();
+          //const html = converter.makeHtml(response.text());
+          const html = marked.parse(response.text());
+          addSystemMessage(addCopyButtons(html));
+          //addSystemMessage(response.text());
         }
+        spinner.style.display = "none"; // Hide the spinner
+      }
 
-        // On Document Load, add all event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            document.documentElement.setAttribute('data-theme', 'dark'); // Default to dark mode
+      // On Document Load, add all event listeners
+      document.addEventListener("DOMContentLoaded", () => {
+        document.documentElement.setAttribute("data-theme", "dark"); // Default to dark mode
 
-            const form = document.getElementById('message-form');
-            const messageArea = document.getElementById('message-area');
+        const form = document.getElementById("message-form");
+        const messageArea = document.getElementById("message-area");
 
-            const imageInput = document.getElementById('image-input');
-            const thumbnailContainer = document.getElementById('thumbnail-container');
-            //for test
-            /*
+        const imageInput = document.getElementById("image-input");
+        const thumbnailContainer = document.getElementById(
+          "thumbnail-container"
+        );
+        //for test
+        /*
             vscode.postMessage({
-                    command: 'sendToGemini',
+                    command: 'send2Gemini',
                     text: 'test message from webview'
                 });
 
             //addSystemMessage('test message', false);
             */
-            imageInput.addEventListener('change', function () {
-                Array.from(this.files).forEach((file, index) => {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        const wrapper = document.createElement('div');
-                        wrapper.classList.add('thumbnail-wrapper');
+        imageInput.addEventListener("change", function () {
+          Array.from(this.files).forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              const wrapper = document.createElement("div");
+              wrapper.classList.add("thumbnail-wrapper");
 
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
+              const img = document.createElement("img");
+              img.src = e.target.result;
 
-                        const removeBtn = document.createElement('button');
-                        removeBtn.classList.add('remove-image');
-                        removeBtn.textContent = 'X';
-                        removeBtn.onclick = function () {
-                            wrapper.remove();
-                            // Remove file from the FileList
-                            imageInput.files = removeFileFromFileList(imageInput.files, index);
-                        };
+              const removeBtn = document.createElement("button");
+              removeBtn.classList.add("remove-image");
+              removeBtn.textContent = "X";
+              removeBtn.onclick = function () {
+                wrapper.remove();
+                // Remove file from the FileList
+                imageInput.files = removeFileFromFileList(
+                  imageInput.files,
+                  index
+                );
+              };
 
-                        wrapper.appendChild(img);
-                        wrapper.appendChild(removeBtn);
-                        thumbnailContainer.appendChild(wrapper);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            });
+              wrapper.appendChild(img);
+              wrapper.appendChild(removeBtn);
+              thumbnailContainer.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+          });
+        });
 
-            // Function to remove a file from the FileList
-            function removeFileFromFileList(fileList, indexToRemove) {
-                const dt = new DataTransfer();
-                for (let i = 0; i < fileList.length; i++) {
-                    if (indexToRemove !== i) {
-                        dt.items.add(fileList[i]);
-                    }
-                }
-                return dt.files;
+        // Function to remove a file from the FileList
+        function removeFileFromFileList(fileList, indexToRemove) {
+          const dt = new DataTransfer();
+          for (let i = 0; i < fileList.length; i++) {
+            if (indexToRemove !== i) {
+              dt.items.add(fileList[i]);
+            }
+          }
+          return dt.files;
+        }
+
+        // On input submit handling
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+
+          const sendButton = document.getElementById("send-button");
+
+          // When API key is not set
+          if (geminiApiKey.trim() === "") {
+            const saveSettingsErrorMessage =
+              document.getElementById("error-message");
+            saveSettingsErrorMessage.textContent = "Please enter a value.";
+            saveSettingsErrorMessage.style.display = "block";
+
+            const settingsIcon = document.getElementById("settings-icon");
+            settingsIcon.click();
+            return;
+          }
+
+          const messageInput = document.getElementById("message-input");
+          const message = messageInput.value.trim();
+          if (!message) return;
+
+          const imageInput = document.getElementById("image-input");
+          const messageArea = document.getElementById("message-area");
+
+          // Handle text message
+          // does not allow empty input
+          if (messageInput.value.trim() !== "") {
+            sendButton.disabled = true;
+            const div = document.createElement("div");
+            div.classList.add("message-box");
+
+            const iconSpan = document.createElement("span");
+            iconSpan.classList.add("user-icon");
+            iconSpan.innerHTML = '<i class="fas fa-user"></i>'; // Using a generic user icon from FontAwesome
+            div.appendChild(iconSpan);
+
+            const messageSpan = document.createElement("span");
+            messageSpan.textContent = messageInput.value;
+            div.appendChild(messageSpan);
+
+            messageArea.appendChild(div);
+            messageInput.value = "";
+
+            let imageFiles = [];
+            // Handle image upload
+
+            if (imageInput.files.length > 0) {
+              Array.from(imageInput.files).forEach((file, index) => {
+                const img = document.createElement("img");
+                img.classList.add("message-image");
+                img.src = URL.createObjectURL(file);
+                img.onload = () => URL.revokeObjectURL(img.src); // Release object URL after loading
+                messageArea.appendChild(img);
+                imageInput.value = "";
+                imageFiles.push(file);
+              });
+
+              // Remove image thumbnail
+              const thumbnailContainer = document.getElementById(
+                "thumbnail-container"
+              );
+              thumbnailContainer.textContent = "";
             }
 
-            // On input submit handling
-            form.addEventListener('submit', (event) => {
-                event.preventDefault();
-
-                const sendButton = document.getElementById('send-button');
-
-                // When API key is not set
-                if (geminiApiKey.trim() === '') {
-                    const saveSettingsErrorMessage = document.getElementById('error-message');
-                    saveSettingsErrorMessage.textContent = 'Please enter a value.';
-                    saveSettingsErrorMessage.style.display = 'block';
-
-                    const settingsIcon = document.getElementById('settings-icon');
-                    settingsIcon.click();
-                    return;
-                }
-
-                const messageInput = document.getElementById('message-input');
-                const message = messageInput.value.trim();
-                if (!message) return;
-                /*
-                vscode.postMessage({
-                    command: 'sendToGemini',
-                    text: message
-                });
-                */
-                const imageInput = document.getElementById('image-input');
-                const messageArea = document.getElementById('message-area');
-
-                // Handle text message
-                // does not allow empty input
-                if (messageInput.value.trim() !== '') {
-                    sendButton.disabled = true;
-                    const div = document.createElement('div');
-                    div.classList.add('message-box');
-
-                    const iconSpan = document.createElement('span');
-                    iconSpan.classList.add('user-icon');
-                    iconSpan.innerHTML = '<i class="fas fa-user"></i>';  // Using a generic user icon from FontAwesome
-                    div.appendChild(iconSpan);
-
-                    const messageSpan = document.createElement('span');
-                    messageSpan.textContent = messageInput.value;
-                    div.appendChild(messageSpan);
-
-                    messageArea.appendChild(div);
-                    messageInput.value = '';
-
-                    let imageFiles = [];
-                    // Handle image upload
-
-                    if (imageInput.files.length > 0) {
-                        Array.from(imageInput.files).forEach((file, index) => {
-                            const img = document.createElement('img');
-                            img.classList.add('message-image')
-                            img.src = URL.createObjectURL(file);
-                            img.onload = () => URL.revokeObjectURL(img.src); // Release object URL after loading
-                            messageArea.appendChild(img);
-                            imageInput.value = '';
-                            imageFiles.push(file)
-                        });
-
-                        // Remove image thumbnail
-                        const thumbnailContainer = document.getElementById('thumbnail-container');
-                        thumbnailContainer.textContent = '';
-                    }
-
-                    sendToGemini(messageArea.lastChild.textContent, imageFiles);
-                    // Scroll to the bottom
-                    messageArea.scrollTop = messageArea.scrollHeight;
-                    sendButton.disabled = false;  // disable send button
-                }
-
-
+            //sendToGemini(messageArea.lastChild.textContent, imageFiles);
+            //확장으로 메시지를 전달
+            vscode.postMessage({
+              command: "sendToExtension",
+              text: messageArea.lastChild.textContent,
             });
-
-            // Handle settings dialog
-            const settingsIcon = document.getElementById('settings-icon');
-            const settingsDialog = document.getElementById('settings-dialog');
-            const closeSettings = document.querySelector('.close-button');
-            const saveSettingsButton = document.getElementById('save-settings');
-
-            settingsIcon.onclick = () => {
-                settingsDialog.style.display = 'block';
-            };
-
-            closeSettings.onclick = () => {
-                settingsDialog.style.display = 'none';
-            };
-
-            saveSettingsButton.onclick = () => {
-                // Logic to save settings
-                const settingsValue = document.getElementById('settings-input').value;
-                const newGeminiApiKey = settingsValue.trim();
-
-                if (newGeminiApiKey !== geminiApiKey) {
-                    geminiApiKey = newGeminiApiKey;
-                    localStorage.setItem('gemini-api-key', geminiApiKey);
-                    geminiChat = null;  // remove existing gemini chat instance to force it to create a new one
-                }
-
-                if (geminiApiKey !== '') {
-                    const saveSettingsErrorMessage = document.getElementById('error-message');
-                    saveSettingsErrorMessage.style.display = 'none';
-                }
-                settingsDialog.style.display = 'none';
-            };
-
-            // Allow Textarea to expand dynamically
-            const textarea = document.getElementById('message-input');
-            textarea.addEventListener('input', function () {
-                this.style.height = 'auto'; // Reset height to auto to allow shrink
-                this.style.height = this.scrollHeight + 'px'; // Adjust height based on content
-            });
-
-            // Dark mode toggle functionality
-            const darkModeToggle = document.getElementById('dark-mode-toggle');
-            darkModeToggle.addEventListener('change', function () {
-                if (!this.checked) {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                } else {
-                    document.documentElement.removeAttribute('data-theme');
-                }
-            });
+            // Scroll to the bottom
+            messageArea.scrollTop = messageArea.scrollHeight;
+            sendButton.disabled = false; // disable send button
+          }
         });
-    </script>
-</body>
 
+        // Handle settings dialog
+        const settingsIcon = document.getElementById("settings-icon");
+        const settingsDialog = document.getElementById("settings-dialog");
+        const closeSettings = document.querySelector(".close-button");
+        const saveSettingsButton = document.getElementById("save-settings");
+
+        settingsIcon.onclick = () => {
+          settingsDialog.style.display = "block";
+        };
+
+        closeSettings.onclick = () => {
+          settingsDialog.style.display = "none";
+        };
+
+        saveSettingsButton.onclick = () => {
+          // Logic to save settings
+          const settingsValue = document.getElementById("settings-input").value;
+          const newGeminiApiKey = settingsValue.trim();
+
+          if (newGeminiApiKey !== geminiApiKey) {
+            geminiApiKey = newGeminiApiKey;
+            localStorage.setItem("gemini-api-key", geminiApiKey);
+            geminiChat = null; // remove existing gemini chat instance to force it to create a new one
+          }
+
+          if (geminiApiKey !== "") {
+            const saveSettingsErrorMessage =
+              document.getElementById("error-message");
+            saveSettingsErrorMessage.style.display = "none";
+          }
+          settingsDialog.style.display = "none";
+        };
+
+        // Allow Textarea to expand dynamically
+        const textarea = document.getElementById("message-input");
+        textarea.addEventListener("input", function () {
+          this.style.height = "auto"; // Reset height to auto to allow shrink
+          this.style.height = this.scrollHeight + "px"; // Adjust height based on content
+        });
+
+        // Dark mode toggle functionality
+        const darkModeToggle = document.getElementById("dark-mode-toggle");
+        darkModeToggle.addEventListener("change", function () {
+          if (!this.checked) {
+            document.documentElement.setAttribute("data-theme", "dark");
+          } else {
+            document.documentElement.removeAttribute("data-theme");
+          }
+        });
+      });
+    </script>
+  </body>
 </html>
