@@ -66,7 +66,11 @@ export function activate(context: vscode.ExtensionContext) {
         })
         .join("\n");
 
-      // CSS URI를 삽입할 수 있도록 HTML에 placeholder 설정
+        // 현재 활성 파일명 가져오기
+      const activeEditor = vscode.window.activeTextEditor;
+      const currentFile = activeEditor ? path.basename(activeEditor.document.fileName) : "Untitled";
+
+        // CSS URI를 삽입할 수 있도록 HTML에 placeholder 설정
       html = html.replace("{{styleUri}}", cssUri.toString());
       html = html.replace("{{componentScripts}}", componentScripts);
 
@@ -74,12 +78,25 @@ export function activate(context: vscode.ExtensionContext) {
 
       panel.webview.onDidReceiveMessage(
         async (message) => {
+          if (message.command === "requestFile") {
+            panel.webview.postMessage({
+              command: "setFile",
+              filename: currentFile,
+            });
+          }
           if (message.command === "insertOrUpdateCode") {
             //await insertOrUpdateClass(message.code);
             let func_data = JSON.parse(getFunc(message.code));
+            const editor = vscode.window.activeTextEditor;
+
+            if (!editor) {
+              vscode.window.showErrorMessage("활성 편집기가 없습니다.");
+              return;
+            }
 
             for (let i = 0; i < func_data.length; i++) {
-              console.log(func_data[i]);
+              //console.log(func_data[i]);
+              let result = findFunc(editor.document.getText(), func_data[i]);
             }
           } else if (message.command === "diffWithTempFile") {
             //await insertOrUpdateClass(message.code);
@@ -126,6 +143,9 @@ export function activate(context: vscode.ExtensionContext) {
           } else if (message.command === "sendToExtension") {
             console.log("Received from webview:", message.text);
             
+            // @filename 처리
+            // 웹뷰로 응답 전송
+            //const finalText = '1부터 100까지 자연수 합계를 구하는 자바 코드를 작성해주세요';
 
             let prompt = message.text;
 
@@ -227,6 +247,44 @@ export function activate(context: vscode.ExtensionContext) {
 
     // (선택) 각 이름을 한 줄씩 출력
     //Array.from(methods).forEach(name => console.log("- " + name));
+  }
+
+  function findFunc(webview: string, funcName: string) {
+    // 줄 단위로 나눔
+    const lines = webview.split("\n");
+
+    // main 메서드 범위 찾기
+    let startLine = null;
+    let endLine = null;
+    let braceCount = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // main 함수 시작 찾기
+      if (startLine === null && line.includes(funcName)) {
+        startLine = i; // 1-based
+        // '{' 개수 카운트
+        braceCount += (line.match(/{/g) || []).length;
+        braceCount -= (line.match(/}/g) || []).length;
+        continue;
+      }
+
+      // main 함수 내부일 경우
+      if (startLine !== null) {
+        braceCount += (line.match(/{/g) || []).length;
+        braceCount -= (line.match(/}/g) || []).length;
+
+        if (braceCount === 0) {
+          endLine = i; // 1-based
+          break;
+        }
+      }
+    }
+
+    // JSON 형태 출력
+    const result = { startLine, endLine };
+    return JSON.stringify(result, null, 2);
   }
 }
 

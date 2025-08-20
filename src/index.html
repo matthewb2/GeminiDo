@@ -30,6 +30,7 @@
       <div id="thumbnail-container"></div>
       <!-- Container for thumbnails -->
       <div id="spinner" class="spinner" style="display: none"></div>
+      <div id="current-file" class="current-file"></div>
       <form id="message-form">
         <!-- 메시지 입력창 -->
         <textarea
@@ -102,8 +103,16 @@
         if (message.command === "sendToGemini") {
           // 확장에서 받은 데이터로 addSystemMessage 호출
           sendToGemini(message.text, message.files);
+        } else if (message.command === "setFile") {
+          document.getElementById("current-file").textContent =
+            "@" + message.filename;
         }
       });
+
+      function setCurrentFileName(filename) {
+        const fileElement = document.getElementById("current-file");
+        fileElement.textContent = `@${filename}`;
+      }
 
       // Function to add copy & Add buttons and functionality
       function addCopyButtons(html) {
@@ -322,6 +331,11 @@
         const thumbnailContainer = document.getElementById(
           "thumbnail-container"
         );
+
+        // VSCode 확장에 현재 파일명 요청
+        vscode.postMessage({ command: "requestFile" });
+
+        //setCurrentFileName("index.html");
         //for test
         /*
             vscode.postMessage({
